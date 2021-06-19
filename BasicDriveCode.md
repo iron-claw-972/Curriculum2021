@@ -4,7 +4,7 @@
 
 ## 1. Purpose
 
-This activity will introduce several key topics, such as how to spin a motor, how to read a joystick, and how to write basic robot drive code. In addition, it will describe how to use some of the features of FRC VS Code, such as creating a robot project with the WPILib extension.
+This activity will introduce several key topics, such as how to spin a motor, how to read a joystick, and how to write basic robot drive code. In addition, it will describe how to use some of the features of FRC VS Code, such as creating a robot project with the WPILib extension. It will also introduce you to command based programming.
 
 ## 2. Materials
 
@@ -16,16 +16,16 @@ This activity will introduce several key topics, such as how to spin a motor, ho
 
 # Creating a Project
 
-1. Refer to the Github tutorial and create a new repository. The default location should be in Documents/Github/TheRepo
-2. Next open up VSCode 2020. 
+1. Refer to the Github tutorial and create a new repository. The default location should be in Documents/Github/YourRepo
+2. Next open up VSCode 2021. 
 3. Click the W icon in the top right corner. This should open up a text box. Type in "Create a new project" and press enter. This should bring you to the WPILib New Project Creator
 4. Click "Select a project type (Example or Template)" 
-5. Press template, then Java, then Timed Robot
+5. Press template, then Java, then Command Robot (not Old Command Robot)
 6. Next click "Select a new project folder" and find and select the repository folder you created previously.
 7. Enter a valid project name using capital letters to separate words with no spaces (ex. "ExampleProject")
-8. I hope you can answer the last question
+8. Enter your team number
 9. Click generate project
-10. Inside github desktop, many files should have appeared. Write a summary and description and click commit to master.
+10. Inside github desktop, many files should have appeared. Write a summary like "Created command-based project" and click commit to master.
 
 
 ![image](https://github.com/iron-claw-972/Curriculum2020/blob/master/images/commitcreatechanges.png)
@@ -33,176 +33,224 @@ This activity will introduce several key topics, such as how to spin a motor, ho
 
 # Making robot move
 
-1. First we will need to install some vendor libraries. Install the ones for CTRE and Rev. It is detailed [here](https://github.com/iron-claw-972/Curriculum2020/blob/master/InstallingFrcPrereqs.md#vendor-libraries)
-2. Next navigate to Robot.java by clicking the arrows in the folder structure on the left:
+1. First we will need to install some vendor libraries. Install the ones for CTRE and Rev, which will allow us to control CTRE and Rev motor controllers, like the TalonSRX or SparkMax. Installation is detailed [here](https://github.com/iron-claw-972/Curriculum2020/blob/master/InstallingFrcPrereqs.md#vendor-libraries). You must have an internet connection to install the vendor libraries (you cannot be connected to the robot, must be connected to wifi).
+2. Next navigate to java\frc\robot by clicking the arrows in the folder structure on the left:
 
 ![image](https://github.com/iron-claw-972/Curriculum2020/blob/master/images/clickrobotdotjava.png)
 
-3. Double click on Robot.java. The file editor should open.
-4. Since we won't be doing anything with autonomous right now, you can delete everything inside this file and paste this code:
+3. You should see Main.java, Robot.java, RobotContainer.java, and Constants.java. You should also see 2 folders: commands and subsystems. The template has already filled out Main.java and Robot.java, you will not need to touch these. A brief overview of the important files we will be using:
+- `RobotContainer.java`: this is the heart of your program. This class represents your robot, and contains instance variables for each of the subsystems (like drivetrain, elevator, intake, shooter, etc.). It is also the place where commands are bound to triggers. Commands are objects that tell subsystems to do something (like DriveForward or IntakeBall), and triggers are things that trigger commands (like a joystick button press, button release, or sensor measurement from the robot)
+- `Subsystems`: Subsystems are classes that represent mechanisms on the robot, and subsystem classes have methods that tell mechanisms to do something. For example, you might have a subsystem for your ball shooter mechanism, with methods like SpinUpToLowSpeed, SpinUpToHighSpeed, StopSpinning, ReverseDirection, and ShootBalls. All subsystems shoul be placed in the subsystems folder.
+- `Constants.java`: This class contains variables that represent constants about the robot. For example, it could hold IDs of motors, pneumatics, and more. It could also store gear ratios, measurements, or other properties. Subsystems would then use the constants stored in Constants.java
+- `Commands`: Commands tell your robot to do something. These classes are instantiated with the subsystems they use in their contructor, and have 3 main methods. The initialize method is called when the command is triggered, the execute method is called around 50 times a second when the command is scheduled, and end method is called when the command is done. 
+
+
+
+4. Since we want to make our robot drive, we will first have to create a drivetrain subsystem. To do this, create a file called Drivetrain.java in the subsystems folder (right click on subsystems and click "New file"). Inside of it, you can paste the basic template for a subsystem.:
 
 ```
+package frc.robot.subsystems;
 
-package frc.robot;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.Joystick;
-import com.revrobotics.CANSparkMax;
-import com.ctre.phoenix.motorcontrol.can.*;
-import com.ctre.phoenix.motorcontrol.ControlMode;
-
-
-public class Robot extends TimedRobot {
-
-  @Override
-  public void robotInit() {
-
-  }
-
-  @Override
-  public void robotPeriodic() {
-
-  }
-
-  @Override
-  public void autonomousInit() {
-
-  }
-
+public class Drivetrain extends SubsystemBase {
   /**
-   * This function is called periodically during autonomous.
+   * Creates a new Drivetrain.
    */
-  @Override
-  public void autonomousPeriodic() {
+  public Drivetrain() {
 
   }
 
-  /**
-   * This function is called periodically during operator control.
-   */
   @Override
-  public void teleopPeriodic() {
-  }
-
-  /**
-   * This function is called periodically during test mode.
-   */
-  @Override
-  public void testPeriodic()
-
+  public void periodic() {
+    // This method will be called once per scheduler run
   }
 }
-```
-
-
-5. Right now, this code doesn't make the robot do anything. In FRC, there are mainly 4 types of motor controllers we use - the VictorSPX, the TalonSRX, the TalonFX, and the SparkMax. Each of these need to be programmed in a different way. Let's go over the basics of how to use each motor controller to spin a motor.
-
-- TalonSRX: To initialize the TalonSRX, first declare an instance variable with the type `TalonSRX` in the Robot class. For example, `TalonSRX TalonSRXMotor;`. Next in the robotInit method, we want to initialize the variable. To initialize a motor controller, we need the CAN Device ID the motor controller is plugged in to. This can be found on the robot. When you don't know what the id will be, you can just leave it at -1 (non-existant id) so people know that the CAN IDs need to be added. Add `TalonSRXMotor = new TalonSRX(-1);` to robotInit. To spin the motor, add `TalonSRXMotor.set(ControlMode.PercentOutput, .9);` to teleop periodic. This will tell the robot to keep spinning the motor at 90% power during teleop. Using -0.9 will cause the motor to spin the other way. The resulting code will look like this:
 
 ```
-package frc.robot;
 
-import edu.wpi.first.wpilibj.TimedRobot;
+
+5. Right now, this subsystem doesn't make the robot do anything. In FRC, there are mainly 4 types of motor controllers we use - the VictorSPX, the TalonSRX, the TalonFX, and the SparkMax. Each of these has a different object. However, we can use WPI's SpeedControllerGroup object to make them work the same way. First let's go over the basics ofeach motor controller.
+
+- TalonSRX: To initialize a motor controller, we need the CAN Device ID the motor controller is plugged in to. This can be found on the robot, or with the Phoenix Tuner application. When you don't know what the id will be, you can just leave it at -1 (non-existant id) so people know that the CAN IDs need to be added. Add `TalonSRXMotor = new TalonSRX(-1);` to robotInit. To spin the motor, add `TalonSRXMotor.set(ControlMode.PercentOutput, .9);`. This will tell the robot to keep spinning the motor at 90% power. Using -0.9 will cause the motor to spin the other way. Here are some examples. A special feature of the Talon SRX motor controller is that it has port for an encoder to plug into it (the VictorSPX does not have this).:
+
+```
+//to import
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 
+//to create
+TalonSRX TalonSRXMotor;
 
-public class Robot extends TimedRobot {
+//to instantiate
+TalonSRXMotor = new TalonSRX(-1);
 
-  TalonSRX TalonSRXMotor;
+//to set
+TalonSRXMotor.set(ControlMode.PercentOutput, .9);
 
-  @Override
-  public void robotInit() {
-    TalonSRXMotor = new TalonSRX(-1);
-  }
-
-  @Override
-  public void teleopPeriodic() {
-    TalonSRXMotor.set(ControlMode.PercentOutput, .9);
-  }
-
-}
 ```
-- VictorSPX: The VictorSPX works in the same way as the TalonSRX except it a different class.
+- VictorSPX: The VictorSPX works in the same way as the TalonSRX except it a different class and cannot accomodate an encoder connected to it.
 ```
-package frc.robot;
-
-import edu.wpi.first.wpilibj.TimedRobot;
+//to import
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 
+//to create
+VictorSPX VictorSPXMotor;
 
-public class Robot extends TimedRobot {
+//to instantiate
+VictorSPXMotor = new VictorSPX(-1);
 
-  VictorSPX VictorSPXMotor;
+//to set
+VictorSPXMotor.set(ControlMode.PercentOutput, .9);
+```
+- TalonFX: The TalonFX also works similar to the TalonSRX except you should use the TalonFXControlMode class. The TalonFX is the built in motor controller for the Falcon500 motor, and comes with an encoder connected to it.:
+```
+//to import
+import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
+import com.ctre.phoenix.motorcontrol.can.TalonFX;
 
-  @Override
-  public void robotInit() {
-    VictorSPXMotor = new VictorSPX(-1);
+//to create
+TalonFX TalonFXMotor;
+
+//to instantiate
+TalonFXMotor = new TalonFX(-1);
+
+//to set
+TalonFXMotor.set(TalonFXControlMode.PercentOutput, .9);
+```
+
+- The SparkMax uses the CANSparkMax class as shown below. If you are using the SparkMax with a NEO motor, you MUST plug in an encoder wire as it is brushless. Otherwise the motor will fry. If you are not using a brushless motor make sure to use `MotorType.kBrushed` instead of `MotorType.kBrushless`. To check if a SparkMax is driving a brushed or brushless motor, check how many wires are coming out of it (excluding the encoder wires). There will be three fat wires for brushless motors and two fat wires for brushed motors.
+
+```
+//to import
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
+//to create
+CANSparkMax SparkMaxMotor;
+
+//to instantiate
+SparkMaxMotor = new CANSparkMax(-1, MotorType.kBrushless);
+
+//to set
+SparkMaxMotor.set(.9);
+```
+
+6. Now we know how to spin motors, so we can finish creating our drivetrain subsystem. We will be creating a drivetrain subsystem for hypothetical 6 wheeled west coast drive robot that has 2 Falcon 500 motors per side (which have built in TalonFX motor controllers). Below is the subsystem filled in with the TalonFX objects and imports. Notice that we are getting our motorIDs from the constants class (you can add static final int variables in Constants.java).
+
+```
+package frc.robot.subsystems;
+import frc.robot.Constants;
+
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
+import com.ctre.phoenix.motorcontrol.can.*;
+
+
+public class Drivetrain extends SubsystemBase {
+  private final TalonFX leftMotor1 = new TalonFX(Constants.leftMotor1ID);
+  private final TalonFX leftMotor2 = new TalonFX(Constants.leftMotor2ID);
+  private final TalonFX rightMotor1 = new TalonFX(Constants.rightMotor1ID);
+  private final TalonFX rightMotor2 = new TalonFX(Constants.rightMotor1ID);
+
+  public Drivetrain() {
+
   }
 
-
   @Override
-  public void teleopPeriodic() {
-    VictorSPXMotor.set(ControlMode.PercentOutput, .9);
+  public void periodic() {
+    // This method will be called once per scheduler run
   }
-
 }
-```
-- TalonFX: The TalonFX also works similar to the TalonSRX except you should use the TalonFXControlMode class:
-```
-package frc.robot;
 
-import edu.wpi.first.wpilibj.TimedRobot;
+```
+Since our robot is a differential drive robot (which means there are two sides that are controlled independently), we can first group our motor controllers into SpeedControllerGroups for the left and right sides of the robot as shown below. SpeedControllerGroups behave similar to motor controllers. For example, you can use .set(0.9) on them to set all of the motors in the group to 90% power. Additionally, we must invert one side of the drivetrain. If we did not invert one side, and we set both the left and right motors to positive 90% motor power, it would actually spin in an circle since the left and right motors are rotated from each other. Since we would like it to go forward when we set the left and right motor groups to a positive speed, we must invert one side. As you can see below, this is done in the contructor.
+```
+package frc.robot.subsystems;
+import frc.robot.Constants;
+
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
 import com.ctre.phoenix.motorcontrol.can.TalonFX;
 
 
-public class Robot extends TimedRobot {
+public class Drivetrain extends SubsystemBase {
+  private final TalonFX leftMotor1 = new TalonFX(Constants.leftMotor1ID);
+  private final TalonFX leftMotor2 = new TalonFX(Constants.leftMotor2ID);
+  private final TalonFX rightMotor1 = new TalonFX(Constants.rightMotor1ID);
+  private final TalonFX rightMotor2 = new TalonFX(Constants.rightMotor1ID);
 
-  TalonFX TalonFXMotor;
+  private final SpeedControllerGroup leftMotors = 
+        new SpeedControllerGroup(leftMotor1, leftMotor2);
 
-  @Override
-  public void robotInit() {
-    TalonFXMotor = new TalonFX(-1);
+  private final SpeedControllerGroup rightMotors = 
+        new SpeedControllerGroup(rightMotor1, rightMotor2);
+
+
+  public Drivetrain() {
+    rightMotors.setInverted(true);
   }
 
-
   @Override
-  public void teleopPeriodic() {
-    TalonFXMotor.set(TalonFXControlMode.PercentOutput, .9);
+  public void periodic() {
+    // This method will be called once per scheduler run
   }
-
 }
-```
-
-- The SparkMax uses the CANSparkMax class as shown below. If you are using the SparkMax with a NEO motor, you MUST plug in an encoder wire as it is brushless. Otherwise the motor will fry. If you are not using a brushless motor make sure to use `MotorType.kBrushed`. To check if a SparkMax is driving a brushed or brushless motor, check how many wires are coming out of it (excluding the encoder wires). There will be three for brushless motors and two for brushed motors.
 
 ```
-package frc.robot;
+Now that we have our SpeedControllerGroups, let's create an arcade drive functionality for our subsystem (arcade drive is where one joystick indicates the left-right turning amount, and the other joystick indicates the forward-backwards throttle power). To do this, we will create 2 instance variables that store the power that is given to the left and right sides of the robot, and create an arcade drive method that sets them depending on the throttle and turning values that are inputed. Then, in the periodic method, we will set the motor power to the actual motors.
 
-import edu.wpi.first.wpilibj.TimedRobot;
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+```
+package frc.robot.subsystems;
 
-public class Robot extends TimedRobot {
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
+import com.ctre.phoenix.motorcontrol.can.TalonFX;
 
-  CANSparkMax SparkMaxMotor;
 
-  @Override
-  public void robotInit() {
-    SparkMaxMotor = new CANSparkMax(-1, MotorType.kBrushless);
+public class Drivetrain extends SubsystemBase {
+  private final TalonFX leftMotor1 = new TalonFX(Constants.leftMotor1ID);
+  private final TalonFX leftMotor2 = new TalonFX(Constants.leftMotor2ID);
+  private final TalonFX rightMotor1 = new TalonFX(Constants.rightMotor1ID);
+  private final TalonFX rightMotor2 = new TalonFX(Constants.rightMotor1ID);
+
+  private final SpeedControllerGroup leftMotors = 
+        new SpeedControllerGroup(leftMotor1, leftMotor2);
+
+  private final SpeedControllerGroup rightMotors = 
+        new SpeedControllerGroup(rightMotor1, rightMotor2);
+
+  private double leftPower = 0;
+  private double rightPower = 0;
+
+  public Drivetrain() {
+    rightMotors.setInverted(true);
   }
 
-
-  @Override
-  public void teleopPeriodic() {
-    SparkMaxMotor.set(.9);
+  public void arcadeDrive(double throttle, double turn){
+    //turn is positive=>left motor increases=>turns right
+    leftPower = throttle + turn; 
+    rightPower = throttle - turn;
   }
 
+  @Override
+  public void periodic() {
+    leftMotors.set(leftPower);
+    rightMotors.set(rightPower);
+  }
 }
+
 ```
-6. Great, we can spin many types of motors. But how do we get this code onto the robot and run it? First we need to connect our computer to the robot, either with a USB cable, ethernet cable, or through wifi. When using wifi, check the name of the network of the robot (it will be on the bridge), and connect to the wifi network. Then in FRC VSCode (after saving your code), click the W in the upper right hand corner, and select deploy robot code. If the deploy is not successful, it could be due to your code not compiling, not having the correct vendor libraries, not being connected to the robot, or another reason. Make sure to read the error message. If code code deploys successfully, you can open FRC Driver Station, shout ENABLING, and then click enable. If the robot does something unexpected and is not suspended on blocks, you can press disable or the space key to stop it. Note that if you press the space key you will not be able to enable it again until you redeploy.
+
+
+
+
+6. Great, we know how to spin many types of motors. But how do we get this code onto the robot and run it? First we need to connect our computer to the robot, either with a USB cable, ethernet cable, or through wifi. When using wifi, check the name of the network of the robot (it will be on the bridge), and connect to the wifi network. Then in FRC VSCode (after saving your code), click the W in the upper right hand corner, and select deploy robot code. If the deploy is not successful, it could be due to your code not compiling, not having the correct vendor libraries, not being connected to the robot, or another reason. Make sure to read the error message. If code code deploys successfully, you can open FRC Driver Station, shout ENABLING, and then click enable. If the robot does something unexpected and is not suspended on blocks, you can press disable or the space key to stop it. Note that if you press the space key you will not be able to enable it again until you redeploy.
 
 7. Next we will drive this motor off of a joystick. Controllers have buttons and axis: buttons can give a 0 or 1 value while axis can range from -1 to 1 (except for triggers which go from 0 to 1). In this example we will use an axis from the joystick, which will correspond to how much power we tell a TalonSRX to give a motor. Each joystick has 2 axis, one for how much it is moved left and right and one for how much it is moved up and down. Each axis has an ID which can be determined by opening FRC Driver Station. Additionally, each controller has an ID which can be determined in FRC Driver Station. To use input devices like controllers and gamepads, we have to use the Joystick class (it represents a whole controller, not just a joystick). To get the -1 to 1 value of an axis, we can use the `getRawAxis(int ID)` method, and to get the 0 or 1 value of a button, we can use the `getRawButton(int ID)` method.
 
